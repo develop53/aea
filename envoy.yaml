@@ -7,3 +7,26 @@ dynamic_resources:
     path: /etc/envoy/cds.yaml
   lds_config:
     path: /etc/envoy/lds.yaml
+
+
+
+
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    server {
+        listen 80; 
+        server_name xxx.net; 
+
+        location / {
+            proxy_pass http://192.168.1.233:4000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
