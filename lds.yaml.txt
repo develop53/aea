@@ -53,3 +53,68 @@ resources:
         - name: envoy.filters.http.router
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+
+
+
+
+
+
+
+- name: Kullanıcıları yönet ssh key ekle
+  hosts: all
+  become: true
+  vars:
+   #kullanıcı listesi
+   users:
+     - name: test
+       state: present
+       ssh_key: "ssh-rsa.."
+       sudo: true
+  tasks:
+   #kullanıcının varlığını sağla veya kaldır
+   - name: kullanıcı oluştur veya kaldır
+     ansible.builtin.user:
+      name: "{{ item.name }}"
+      state: "{{ item.state }}"
+      shell: /bin/bash
+     loop: "{{users}}"
+     when: item.state == 'present' or item.state == 'absent'
+
+  #kullanıcının ssh dizinini oluştur
+    - name: .ssh dizini oluştur
+      ansible.builtin.file:
+       path:"/home/{{ item.name }}/.ssh"
+       state: directory
+       mode: '0700'
+       owner: "{{ item.name }}"
+       group: "{{ item.name }}"
+      loop: "{{ users }}"
+      when: item.state == 'present'
+
+# ssh public keyini authorized_keys dosyasına ekle
+     - name: ssh public anahtarı ekle
+       ansible.builtin.copy:
+        dest: "/home/{{ item.name }}/.ssh/authorizedkeys"
+        content: "{{ item.ssh_key }}"
+        mode: '0600'
+        owner: "{{ item.name }}"
+        group: "{{ item.name }}"
+      loop: "{{ users }}"  
+      when: item.state == 'present' and item.ssh_key is defined
+#kullanıcıya sudo yetkisi ver veya kaldir
+     - name: sudo yetkisi düzenle
+       ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/{{ item.name }}
+        line: "{{ item.name }} ALL=(ALL) NOPASSWD:ALL"
+        state: "{{ 'present' if item.sudo else 'absent' }}"
+        create: true
+       loop: "{{ users }}"
+       when: item.state == 'present' 
+
+
+
+
+
+
+
